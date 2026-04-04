@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  financialRecords FinancialRecord[]
+}
+
+model Sale {
+  id                 String   @id @default(cuid())
+  client             String
+  passengers         Int
+  package            String
+  totalValue         Float
+  currency           String   @default("BRL")
+  saleDate           DateTime
+  tourDate           DateTime
+  reservationPayment Float    @default(0)
+  remainingValue     Float    @default(0)
+  paymentMethod      String   @default("Pix")
+  installments       Int      @default(1)
+  interestRate       Float    @default(0)
+  status             String   @default("ativo")
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  financialRecords FinancialRecord[]
+  costs            SaleCost[]
+}
+
+model SaleCost {
+  id          String   @id @default(cuid())
+  saleId      String
+  description String
+  amount      Float
+  createdAt   DateTime @default(now())
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+model FinancialRecord {
+  id                String    @id @default(cuid())
+  type              String
+  paymentMethod     String    @default("Pix")
+  amount            Float
+  currency          String    @default("BRL")
+  categoryId        String?
+  transactionDate   DateTime
+  dueDate           DateTime?
+  paymentDate       DateTime?
+  status            String    @default("previsto")
+  description       String?
+  notes             String?
+  reference         String?
+  saleId            String?
+  installmentNumber Int?
+  totalInstallments Int?
+  receiptPath       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  category Category? @relation(fields: [categoryId], references: [id])
+  sale     Sale?     @relation(fields: [saleId], references: [id])
+}
+
+model SystemSettings {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  value       String
+  description String?
+}
+
+model PaymentMethodConfig {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  active      Boolean @default(true)
+  defaultRate Float   @default(0)
+}
