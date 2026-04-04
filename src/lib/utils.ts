@@ -45,12 +45,12 @@ export const STATUS_LABELS: Record<string, string> = {
 }
 
 export const STATUS_COLORS: Record<string, string> = {
-  previsto: 'bg-blue-100 text-blue-700',
-  pendente: 'bg-yellow-100 text-yellow-700',
-  pago: 'bg-green-100 text-green-700',
-  recebido: 'bg-green-100 text-green-700',
-  cancelado: 'bg-red-100 text-red-700',
-  estornado: 'bg-gray-100 text-gray-700',
+  previsto: 'badge-accent',
+  pendente: 'badge-warning',
+  pago: 'badge-success',
+  recebido: 'badge-success',
+  cancelado: 'badge-error',
+  estornado: 'badge-neutral',
 }
 
 export const PAYMENT_METHODS = [

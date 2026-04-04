@@ -15,18 +15,10 @@ import {
 import { formatCurrency, formatDate, STATUS_LABELS, STATUS_COLORS, cn } from '@/lib/utils'
 import { apiFetch } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { HorizonSilhouette, SunIndicator, GaugeArc, EmptyDesert } from '@/components/DesertSVG'
+import IconCircle from '@/components/IconCircle'
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, ResponsiveContainer,
 } from 'recharts'
 
 interface CurrencyBalance {
@@ -44,40 +36,33 @@ interface DashboardData {
   breakEvenProgress: number
   cashFlowRisk: boolean
   recentTransactions: Array<{
-    id: string
-    type: string
-    amount: number
-    currency: string
-    description: string | null
-    status: string
-    transactionDate: string
-    category: { name: string } | null
-    paymentMethod: string
+    id: string; type: string; amount: number; currency: string; description: string | null
+    status: string; transactionDate: string; category: { name: string } | null; paymentMethod: string
   }>
   revenueByPaymentMethod: Array<{ name: string; value: number }>
   revenueDistribution: Array<{ currency: string; recebido: number; previsto: number }>
 }
 
 interface SellerDashboardData {
-  sellerDashboard: true
-  totalSales: number
-  totalValue: number
-  monthlySales: number
-  monthlyValue: number
-  totalProfit: number
-  recentSales: Array<{
-    id: string
-    client: string
-    package: string
-    totalValue: number
-    saleDate: string
-    status: string
-  }>
+  sellerDashboard: true; totalSales: number; totalValue: number; monthlySales: number
+  monthlyValue: number; totalProfit: number
+  recentSales: Array<{ id: string; client: string; package: string; totalValue: number; saleDate: string; status: string }>
 }
 
-const CHART_COLORS = ['#FFC233', '#E61C5D', '#0E1A2B', '#3B82F6', '#10B981', '#8B5CF6']
 const CURRENCIES = ['BRL', 'CLP', 'USD']
-const CURRENCY_FLAGS: Record<string, string> = { BRL: '🇧🇷', CLP: '🇨🇱', USD: '🇺🇸' }
+const CURRENCY_FLAGS: Record<string, string> = { BRL: '\u{1F1E7}\u{1F1F7}', CLP: '\u{1F1E8}\u{1F1F1}', USD: '\u{1F1FA}\u{1F1F8}' }
+
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="card-elevated p-3 text-xs space-y-1 rounded-input border border-border">
+      <p className="text-text-muted font-display font-medium">{label}</p>
+      {payload.map((p, i) => (
+        <p key={i} className="text-text-primary font-mono font-medium">{p.name}: {formatCurrency(p.value)}</p>
+      ))}
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const { isAdmin, user } = useAuth()
@@ -85,32 +70,23 @@ export default function Dashboard() {
   const [sellerData, setSellerData] = useState<SellerDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadDashboard()
-  }, [])
+  useEffect(() => { loadDashboard() }, [])
 
   async function loadDashboard() {
     try {
       const res = await apiFetch('/api/dashboard')
       if (res.ok) {
         const d = await res.json()
-        if (d.sellerDashboard) {
-          setSellerData(d)
-        } else {
-          setData(d)
-        }
+        if (d.sellerDashboard) setSellerData(d)
+        else setData(d)
       }
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
+    } catch (e) { console.error(e) } finally { setLoading(false) }
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFC233]" />
+        <div className="w-6 h-6 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
       </div>
     )
   }
@@ -118,78 +94,35 @@ export default function Dashboard() {
   // Seller Dashboard
   if (!isAdmin && sellerData) {
     return (
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Ola, {user?.name}!</h1>
-          <p className="text-gray-500">Seu painel de vendas</p>
+          <h1 className="text-heading font-display text-text-primary">Ola, {user?.name}</h1>
+          <p className="text-text-muted text-body mt-1">Seu painel de vendas</p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">Total de Vendas</p>
-              <ShoppingCart size={20} className="text-[#FFC233]" />
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{sellerData.totalSales}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">Valor Total</p>
-              <DollarSign size={20} className="text-green-600" />
-            </div>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(sellerData.totalValue)}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">Vendas do Mes</p>
-              <TrendingUp size={20} className="text-blue-600" />
-            </div>
-            <p className="text-2xl font-bold text-blue-600">{sellerData.monthlySales}</p>
-            <p className="text-sm text-gray-400 mt-1">{formatCurrency(sellerData.monthlyValue)}</p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <KPICard title="Total de Vendas" value={String(sellerData.totalSales)} icon={ShoppingCart} />
+          <KPICard title="Valor Total" value={formatCurrency(sellerData.totalValue)} icon={DollarSign} />
+          <KPICard title="Vendas do Mes" value={String(sellerData.monthlySales)} subtitle={formatCurrency(sellerData.monthlyValue)} icon={TrendingUp} />
         </div>
-
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold text-gray-800">Vendas Recentes</h2>
+        <div className="card-surface overflow-hidden">
+          <div className="px-6 py-5 border-b border-border">
+            <h2 className="text-subheading font-display text-text-primary">Vendas Recentes</h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="text-left p-4 text-sm font-medium text-gray-500">Cliente</th>
-                  <th className="text-left p-4 text-sm font-medium text-gray-500">Pacote</th>
-                  <th className="text-left p-4 text-sm font-medium text-gray-500">Data</th>
-                  <th className="text-left p-4 text-sm font-medium text-gray-500">Status</th>
-                  <th className="text-right p-4 text-sm font-medium text-gray-500">Valor</th>
+          <table className="table-warm">
+            <thead><tr><th>Cliente</th><th>Pacote</th><th>Data</th><th>Status</th><th className="text-right">Valor</th></tr></thead>
+            <tbody>
+              {sellerData.recentSales.map(s => (
+                <tr key={s.id}>
+                  <td className="text-text-primary font-medium">{s.client}</td>
+                  <td className="text-text-secondary">{s.package}</td>
+                  <td className="text-text-muted font-mono tabular-nums">{formatDate(s.saleDate)}</td>
+                  <td><span className={cn(s.status === 'ativo' ? 'badge-success' : s.status === 'cancelado' ? 'badge-error' : 'badge-accent')}>{s.status}</span></td>
+                  <td className="text-right text-accent font-mono font-semibold tabular-nums">{formatCurrency(s.totalValue)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {sellerData.recentSales.map(s => (
-                  <tr key={s.id} className="border-t hover:bg-gray-50">
-                    <td className="p-4 text-sm font-medium text-gray-800">{s.client}</td>
-                    <td className="p-4 text-sm text-gray-600">{s.package}</td>
-                    <td className="p-4 text-sm text-gray-600">{formatDate(s.saleDate)}</td>
-                    <td className="p-4">
-                      <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
-                        s.status === 'ativo' ? 'bg-green-100 text-green-700' :
-                        s.status === 'cancelado' ? 'bg-red-100 text-red-700' :
-                        'bg-blue-100 text-blue-700'
-                      )}>
-                        {s.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-sm text-right font-medium text-green-600">
-                      {formatCurrency(s.totalValue)}
-                    </td>
-                  </tr>
-                ))}
-                {sellerData.recentSales.length === 0 && (
-                  <tr><td colSpan={5} className="p-8 text-center text-gray-400">Nenhuma venda encontrada</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+              {sellerData.recentSales.length === 0 && <tr><td colSpan={5} className="text-center text-text-muted py-12">Nenhuma venda encontrada</td></tr>}
+            </tbody>
+          </table>
         </div>
       </div>
     )
@@ -197,64 +130,124 @@ export default function Dashboard() {
 
   // Admin Dashboard
   const bc = data?.balanceByCurrency || {}
+  const now = new Date()
+  const hour = now.getHours()
+  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+
+  // Build revenue flow data for area chart
+  const flowData = CURRENCIES.filter(cur => bc[cur]).map(cur => ({
+    name: cur,
+    receita: bc[cur].revenue,
+    despesa: bc[cur].expenses,
+  }))
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-500">Radar Financeiro</p>
+    <div className="space-y-8">
+      {/* ===== ZONA A: Hero Card — Horizonte do Atacama ===== */}
+      <div className="card-surface relative overflow-hidden" style={{ minHeight: 140 }}>
+        <div className="absolute inset-0">
+          <HorizonSilhouette className="absolute bottom-0 left-0 w-full h-[60px] md:h-[80px] text-text-primary" />
+          <SunIndicator hour={hour} />
+        </div>
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-start sm:justify-between p-4 md:p-6 h-full gap-2">
+          <div>
+            <p className="text-text-muted text-label font-display">{greeting},</p>
+            <h1 className="text-heading font-display text-text-primary mt-1">{user?.name}</h1>
+            <p className="text-text-muted text-small font-display mt-1 md:mt-2">
+              {now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+          </div>
+          <div className="sm:text-right">
+            <p className="text-label text-text-muted font-display uppercase tracking-wider">Balanco Geral</p>
+            <p className="metric-hero text-text-primary mt-1">
+              {formatCurrency(bc['BRL']?.balance || 0)}
+            </p>
+          </div>
         </div>
       </div>
 
+      {/* Alert */}
       {data?.cashFlowRisk && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-          <AlertTriangle className="text-[#E61C5D]" size={24} />
+        <div className="flex items-center gap-3 bg-status-error/[0.08] border border-status-error/15 rounded-card p-4 animate-fade-in">
+          <AlertTriangle size={20} className="text-status-error flex-shrink-0" />
           <div>
-            <p className="font-semibold text-red-800">Alerta de Fluxo de Caixa</p>
-            <p className="text-sm text-red-600">
-              Contas a pagar excedem contas a receber em uma ou mais moedas
-            </p>
+            <p className="text-sm font-display font-semibold text-status-error">Alerta de Fluxo de Caixa</p>
+            <p className="text-small font-display text-status-error/70 mt-0.5">Contas a pagar excedem contas a receber em uma ou mais moedas</p>
           </div>
         </div>
       )}
 
-      {/* Saldo por Moeda */}
-      {CURRENCIES.map(cur => {
-        const c = bc[cur]
-        if (!c || (c.balance === 0 && c.revenue === 0 && c.expenses === 0 && c.receivables === 0 && c.payables === 0)) return null
-        return (
-          <div key={cur}>
-            <h2 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <span className="text-xl">{CURRENCY_FLAGS[cur]}</span> {cur}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <KPICard title="Saldo" value={formatCurrency(c.balance, cur)} icon={<Wallet size={20} />} color="bg-[#0E1A2B]" trend={c.balance >= 0 ? 'up' : 'down'} />
-              <KPICard title="Receita do Mes" value={formatCurrency(c.revenue, cur)} icon={<TrendingUp size={20} />} color="bg-green-600" trend="up" />
-              <KPICard title="Despesas do Mes" value={formatCurrency(c.expenses, cur)} icon={<TrendingDown size={20} />} color="bg-[#E61C5D]" trend="down" />
-              <KPICard title="A Receber" value={formatCurrency(c.receivables, cur)} icon={<Clock size={20} />} color="bg-blue-600" />
-              <KPICard title="A Pagar" value={formatCurrency(c.payables, cur)} icon={<ArrowDownRight size={20} />} color="bg-orange-500" />
-            </div>
-          </div>
-        )
-      })}
+      {/* ===== ZONA B + C: Chart + KPIs side by side ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
+        {/* Zona B: Chart Principal — Paisagem de Dunas */}
+        <div className="card-surface p-6">
+          <h3 className="text-label font-display text-text-muted uppercase tracking-wider mb-6">Receita por Pagamento</h3>
+          {data?.revenueByPaymentMethod && data.revenueByPaymentMethod.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={data.revenueByPaymentMethod} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(44,36,32,0.06)" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#8C7B6B', fontFamily: 'Plus Jakarta Sans' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#8C7B6B', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="value" name="Receita" fill="#C27B4F" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <EmptyState text="Sem dados para exibir" />}
+        </div>
 
-      {/* Resultado consolidado */}
+        {/* Zona C: KPIs com Gauge Arcs */}
+        <div className="space-y-4">
+          {CURRENCIES.filter(cur => bc[cur] && (bc[cur].balance !== 0 || bc[cur].revenue !== 0)).map(cur => {
+            const c = bc[cur]
+            const target = c.revenue + c.expenses > 0 ? c.revenue + c.expenses : 1
+            const revenuePercent = (c.revenue / target) * 100
+            return (
+              <div key={cur} className="card-surface p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">{CURRENCY_FLAGS[cur]}</span>
+                  <span className="text-label font-display text-text-muted uppercase tracking-wider">{cur}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1 text-center">
+                  <div className="min-w-0 overflow-hidden">
+                    <p className="font-mono text-xs md:text-sm font-semibold tabular-nums text-accent truncate">{formatCurrency(c.revenue, cur)}</p>
+                    <p className="text-small text-text-muted font-display">Receita</p>
+                  </div>
+                  <div className="min-w-0 overflow-hidden">
+                    <p className="font-mono text-xs md:text-sm font-semibold tabular-nums text-text-secondary truncate">{formatCurrency(c.expenses, cur)}</p>
+                    <p className="text-small text-text-muted font-display">Despesas</p>
+                  </div>
+                  <div className="min-w-0 overflow-hidden">
+                    <p className={cn('font-mono text-xs md:text-sm font-semibold tabular-nums truncate', c.balance >= 0 ? 'text-status-success' : 'text-status-error')}>
+                      {formatCurrency(c.balance, cur)}
+                    </p>
+                    <p className="text-small text-text-muted font-display">Saldo</p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <GaugeArc percentage={revenuePercent} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Break-even + Forecast */}
       {data && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">Resultado do Mes por Moeda</h2>
-            <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="card-surface p-6">
+            <h3 className="text-label font-display text-text-muted uppercase tracking-wider mb-5">Resultado do Mes</h3>
+            <div className="space-y-4">
               {CURRENCIES.map(cur => {
                 const c = bc[cur]
                 if (!c || (c.revenue === 0 && c.expenses === 0)) return null
                 const net = c.revenue - c.expenses
                 return (
-                  <div key={cur} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                  <div key={cur} className="flex items-center justify-between">
+                    <span className="text-sm font-display text-text-secondary flex items-center gap-2">
                       <span>{CURRENCY_FLAGS[cur]}</span> {cur}
                     </span>
-                    <span className={cn('text-sm font-bold', net >= 0 ? 'text-green-600' : 'text-red-600')}>
+                    <span className={cn('text-sm font-mono font-bold tabular-nums', net >= 0 ? 'text-status-success' : 'text-status-error')}>
                       {net >= 0 ? '+' : ''}{formatCurrency(net, cur)}
                     </span>
                   </div>
@@ -263,136 +256,127 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Break-even do Mes (BRL)</h2>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <div className="w-full bg-gray-200 rounded-full h-4">
+          <div className="card-surface p-6">
+            <h3 className="text-label font-display text-text-muted uppercase tracking-wider mb-5">Break-even Mensal (BRL)</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2.5 bg-surface-hover rounded-pill overflow-hidden">
                   <div
-                    className="h-4 rounded-full transition-all"
+                    className="h-full rounded-pill transition-all duration-700 ease-out"
                     style={{
                       width: `${Math.min(data.breakEvenProgress, 100)}%`,
-                      backgroundColor: data.breakEvenProgress >= 100 ? '#10B981' : '#FFC233',
+                      background: data.breakEvenProgress >= 100
+                        ? 'linear-gradient(90deg, #5B9A6B, #7AB88A)'
+                        : 'linear-gradient(90deg, #C27B4F, #D4956A)',
                     }}
                   />
                 </div>
+                <span className="text-sm font-mono font-bold text-text-primary w-14 text-right tabular-nums">{data.breakEvenProgress}%</span>
               </div>
-              <span className="text-sm font-medium text-gray-600 w-16 text-right">{data.breakEvenProgress}%</span>
+              <div className="flex justify-between text-small font-display text-text-muted">
+                <span>Meta: {formatCurrency(data.breakEvenTarget)}</span>
+                <span>Atingido: {formatCurrency(bc['BRL']?.revenue || 0)}</span>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              Meta: {formatCurrency(data.breakEvenTarget)} | Atingido: {formatCurrency(bc['BRL']?.revenue || 0)}
-            </p>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Receita por Metodo de Pagamento</h2>
-          {data?.revenueByPaymentMethod && data.revenueByPaymentMethod.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.revenueByPaymentMethod}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Bar dataKey="value" fill="#FFC233" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-400 text-center py-12">Sem dados para exibir</p>
-          )}
+      {/* Revenue Flow Area Chart */}
+      {flowData.length > 0 && (
+        <div className="card-surface p-6">
+          <h3 className="text-label font-display text-text-muted uppercase tracking-wider mb-6">Fluxo por Moeda</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={flowData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(44,36,32,0.06)" />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#8C7B6B', fontFamily: 'Plus Jakarta Sans' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: '#8C7B6B', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} />
+              <defs>
+                <linearGradient id="gradientReceita" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#C27B4F" stopOpacity={0.15} />
+                  <stop offset="100%" stopColor="#C27B4F" stopOpacity={0.03} />
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="receita" name="Receita" stroke="#C27B4F" strokeWidth={2} fill="url(#gradientReceita)" />
+              <Area type="monotone" dataKey="despesa" name="Despesa" stroke="#8C7B6B" strokeWidth={1.5} fill="none" strokeDasharray="4 4" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
+      )}
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Distribuicao de Receita</h2>
-          {data?.revenueDistribution && data.revenueDistribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={data.revenueDistribution.flatMap(d => [
-                    { name: `${d.currency} Recebido`, value: d.recebido },
-                    { name: `${d.currency} Previsto`, value: d.previsto },
-                  ]).filter(d => d.value > 0)}
-                  cx="50%" cy="50%" outerRadius={100} dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {data.revenueDistribution.flatMap((_, i) => [
-                    <Cell key={`rec-${i}`} fill={CHART_COLORS[i * 2 % CHART_COLORS.length]} />,
-                    <Cell key={`prev-${i}`} fill={CHART_COLORS[(i * 2 + 1) % CHART_COLORS.length]} />,
-                  ]).filter((_, idx) => {
-                    const flatData = data.revenueDistribution.flatMap(d => [d.recebido, d.previsto])
-                    return flatData[idx] > 0
-                  })}
-                </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+      {/* ===== ZONA D: Feed de Movimentacoes Recentes — Trilha no Deserto ===== */}
+      <div className="card-surface overflow-hidden">
+        <div className="px-6 py-5 border-b border-border">
+          <h3 className="text-subheading font-display text-text-primary">Movimentacoes Recentes</h3>
+        </div>
+        <div className="p-6">
+          {data?.recentTransactions && data.recentTransactions.length > 0 ? (
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="timeline-line" />
+              <div className="space-y-4">
+                {data.recentTransactions.map((t) => (
+                  <div key={t.id} className="flex items-start gap-2 md:gap-4 pl-2 md:pl-[28px] relative">
+                    {/* Node */}
+                    <div className="absolute left-[8px] md:left-[34px] top-1.5 hidden md:block">
+                      {t.type === 'entrada' ? (
+                        <div className="timeline-node-income" />
+                      ) : (
+                        <div className="timeline-node-expense" />
+                      )}
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 md:ml-6 card-surface p-3 md:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-display font-medium text-text-primary truncate">{t.description || 'Sem descricao'}</p>
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
+                          <span className="text-small font-display text-text-muted">{t.category?.name || '-'}</span>
+                          <span className="text-small font-mono text-text-muted tabular-nums">{formatDate(t.transactionDate)}</span>
+                          <span className={STATUS_COLORS[t.status] || 'badge-neutral'}>{STATUS_LABELS[t.status] || t.status}</span>
+                        </div>
+                      </div>
+                      <span className={cn(
+                        'font-mono font-semibold tabular-nums flex items-center gap-1 text-sm flex-shrink-0',
+                        t.type === 'entrada' ? 'text-accent' : 'text-text-secondary'
+                      )}>
+                        {t.type === 'entrada' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                        {formatCurrency(t.amount, t.currency)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
-            <p className="text-gray-400 text-center py-12">Sem dados para exibir</p>
+            <EmptyState text="Nenhuma movimentacao encontrada" />
           )}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold text-gray-800">Movimentacoes Recentes</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="text-left p-4 text-sm font-medium text-gray-500">Data</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-500">Descricao</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-500">Categoria</th>
-                <th className="text-left p-4 text-sm font-medium text-gray-500">Status</th>
-                <th className="text-right p-4 text-sm font-medium text-gray-500">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.recentTransactions?.map((t) => (
-                <tr key={t.id} className="border-t hover:bg-gray-50">
-                  <td className="p-4 text-sm text-gray-600">{formatDate(t.transactionDate)}</td>
-                  <td className="p-4 text-sm text-gray-800">{t.description || '-'}</td>
-                  <td className="p-4 text-sm text-gray-600">{t.category?.name || '-'}</td>
-                  <td className="p-4">
-                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium', STATUS_COLORS[t.status] || 'bg-gray-100')}>
-                      {STATUS_LABELS[t.status] || t.status}
-                    </span>
-                  </td>
-                  <td className="p-4 text-sm text-right font-medium">
-                    <span className={cn('flex items-center justify-end gap-1', t.type === 'entrada' ? 'text-green-600' : 'text-red-600')}>
-                      {t.type === 'entrada' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                      {formatCurrency(t.amount, t.currency)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {(!data?.recentTransactions || data.recentTransactions.length === 0) && (
-                <tr><td colSpan={5} className="p-8 text-center text-gray-400">Nenhuma movimentacao encontrada</td></tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
   )
 }
 
-function KPICard({ title, value, icon, color, trend }: { title: string; value: string; icon: React.ReactNode; color: string; trend?: 'up' | 'down' }) {
+function KPICard({ title, value, subtitle, icon }: {
+  title: string; value: string; subtitle?: string; icon: typeof Wallet
+}) {
   return (
-    <div className="bg-white rounded-lg shadow p-5">
+    <div className="card-surface-interactive p-5">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-gray-500">{title}</p>
-        <div className={cn('p-1.5 rounded-lg text-white', color)}>{icon}</div>
+        <span className="text-label font-display text-text-muted uppercase tracking-wider">{title}</span>
+        <IconCircle icon={icon} size="md" />
       </div>
-      <p className="text-lg font-bold text-gray-800">{value}</p>
-      {trend && (
-        <div className="flex items-center mt-1">
-          {trend === 'up' ? <ArrowUpRight className="text-green-500" size={14} /> : <ArrowDownRight className="text-red-500" size={14} />}
-        </div>
-      )}
+      <p className="font-mono text-xl font-bold tabular-nums text-text-primary">{value}</p>
+      {subtitle && <p className="text-small font-display text-text-muted mt-1">{subtitle}</p>}
+    </div>
+  )
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-[260px] gap-4">
+      <EmptyDesert className="w-[200px] h-[120px] text-text-primary" />
+      <p className="text-sm font-display text-text-muted">{text}</p>
     </div>
   )
 }
