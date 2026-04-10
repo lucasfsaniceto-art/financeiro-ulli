@@ -7,12 +7,20 @@ export function getAuthHeaders(): Record<string, string> {
 }
 
 export async function apiFetch(url: string, options?: RequestInit) {
-  return fetch(url, {
+  // Add cache-busting timestamp to GET requests to prevent stale data
+  const separator = url.includes('?') ? '&' : '?'
+  const bustUrl = (!options?.method || options.method === 'GET')
+    ? `${url}${separator}_t=${Date.now()}`
+    : url
+
+  return fetch(bustUrl, {
     ...options,
     cache: 'no-store',
     headers: {
       ...getAuthHeaders(),
       ...options?.headers,
+      'Pragma': 'no-cache',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
     },
   })
 }

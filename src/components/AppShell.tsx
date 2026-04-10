@@ -6,7 +6,6 @@ import Sidebar from './Sidebar'
 import TopographyPattern from './TopographyPattern'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -14,6 +13,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     if (!loading && !user && pathname !== '/login') {
@@ -25,6 +25,16 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
+
+  // Track screen size
+  useEffect(() => {
+    function checkMobile() {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   if (loading) {
     return (
@@ -48,7 +58,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const sidebarWidth = sidebarCollapsed ? 60 : 300
 
   function handleToggle() {
-    // On mobile, toggle the mobile drawer
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setMobileOpen(prev => !prev)
     } else {
@@ -65,19 +74,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
       />
-      {/* Desktop: animated marginLeft; Mobile: no margin, top padding for hamburger */}
-      <motion.main
-        animate={{ marginLeft: sidebarWidth }}
-        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-        className="hidden md:block min-h-screen p-6 lg:p-8 relative z-10"
+      <main
+        className="min-h-screen relative z-10 transition-[margin-left,padding] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+        style={{
+          marginLeft: isMobile ? 0 : sidebarWidth,
+          paddingTop: isMobile ? '4rem' : '1.5rem',
+          paddingLeft: isMobile ? '1rem' : '1.5rem',
+          paddingRight: isMobile ? '1rem' : '1.5rem',
+          paddingBottom: isMobile ? '1.5rem' : '1.5rem',
+        }}
       >
-        <div className="max-w-[1440px] mx-auto animate-fade-in">
-          {children}
-        </div>
-      </motion.main>
-      {/* Mobile: no sidebar margin, compact padding */}
-      <main className="md:hidden min-h-screen pt-16 px-4 pb-6 relative z-10">
-        <div className="max-w-[1440px] mx-auto animate-fade-in">
+        <div className="max-w-[1440px] mx-auto lg:px-2">
           {children}
         </div>
       </main>

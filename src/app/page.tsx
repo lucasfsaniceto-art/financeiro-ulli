@@ -79,7 +79,6 @@ export default function Dashboard() {
   const [sellerData, setSellerData] = useState<SellerDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-
   const loadDashboard = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     else setRefreshing(true)
@@ -93,23 +92,26 @@ export default function Dashboard() {
     } catch (e) { console.error(e) } finally { setLoading(false); setRefreshing(false) }
   }, [])
 
-  // Load on mount
-  useEffect(() => { loadDashboard() }, [loadDashboard])
+  // Load on mount — always fetch fresh data
+  useEffect(() => {
+    loadDashboard()
+  }, [loadDashboard])
 
-  // Refresh when tab/window becomes visible (user navigated away and came back)
+  // Also poll every 30 seconds to keep data fresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadDashboard(true)
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [loadDashboard])
+
+  // Refresh when tab/window becomes visible
   useEffect(() => {
     function handleVisibility() {
       if (document.visibilityState === 'visible') loadDashboard(true)
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [loadDashboard])
-
-  // Refresh when window gains focus (e.g. switching between browser tabs)
-  useEffect(() => {
-    function handleFocus() { loadDashboard(true) }
-    window.addEventListener('focus', handleFocus)
-    return () => window.removeEventListener('focus', handleFocus)
   }, [loadDashboard])
 
   if (loading) {
