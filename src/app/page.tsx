@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import {
   Wallet,
   TrendingUp,
@@ -11,6 +11,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ShoppingCart,
+  Users,
+  RefreshCw,
 } from 'lucide-react'
 import { formatCurrency, formatDate, STATUS_LABELS, STATUS_COLORS, cn } from '@/lib/utils'
 import { apiFetch } from '@/lib/api'
@@ -29,6 +31,11 @@ interface CurrencyBalance {
   payables: number
 }
 
+interface RecentSale {
+  id: string; client: string; package: string; totalValue: number; currency: string
+  saleDate: string; status: string; sellerName: string | null
+}
+
 interface DashboardData {
   balanceByCurrency: Record<string, CurrencyBalance>
   forecast30: number
@@ -41,6 +48,8 @@ interface DashboardData {
   }>
   revenueByPaymentMethod: Array<{ name: string; value: number }>
   revenueDistribution: Array<{ currency: string; recebido: number; previsto: number }>
+  salesSummary?: { totalActive: number; totalValue: number; monthlySalesCount: number }
+  recentSales?: RecentSale[]
 }
 
 interface SellerDashboardData {
@@ -69,19 +78,39 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [sellerData, setSellerData] = useState<SellerDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => { loadDashboard() }, [])
-
-  async function loadDashboard() {
+  const loadDashboard = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
     try {
       const res = await apiFetch('/api/dashboard')
       if (res.ok) {
         const d = await res.json()
-        if (d.sellerDashboard) setSellerData(d)
-        else setData(d)
+        if (d.sellerDashboard) { setSellerData(d); setData(null) }
+        else { setData(d); setSellerData(null) }
       }
-    } catch (e) { console.error(e) } finally { setLoading(false) }
-  }
+    } catch (e) { console.error(e) } finally { setLoading(false); setRefreshing(false) }
+  }, [])
+
+  // Load on mount
+  useEffect(() => { loadDashboard() }, [loadDashboard])
+
+  // Refresh when tab/window becomes visible (user navigated away and came back)
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') loadDashboard(true)
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [loadDashboard])
+
+  // Refresh when window gains focus (e.g. switching between browser tabs)
+  useEffect(() => {
+    function handleFocus() { loadDashboard(true) }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [loadDashboard])
 
   if (loading) {
     return (
@@ -95,9 +124,14 @@ export default function Dashboard() {
   if (!isAdmin && sellerData) {
     return (
       <div className="space-y-8">
-        <div>
-          <h1 className="text-heading font-display text-text-primary">Ola, {user?.name}</h1>
-          <p className="text-text-muted text-body mt-1">Seu painel de vendas</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-heading font-display text-text-primary">Ola, {user?.name}</h1>
+            <p className="text-text-muted text-body mt-1">Seu painel de vendas</p>
+          </div>
+          <button onClick={() => loadDashboard(true)} disabled={refreshing} className="btn-ghost text-text-muted">
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <KPICard title="Total de Vendas" value={String(sellerData.totalSales)} icon={ShoppingCart} />
@@ -149,6 +183,14 @@ export default function Dashboard() {
           <HorizonSilhouette className="absolute bottom-0 left-0 w-full h-[60px] md:h-[80px] text-text-primary" />
           <SunIndicator hour={hour} />
         </div>
+        {/* Refresh button */}
+        <button
+          onClick={() => loadDashboard(true)}
+          disabled={refreshing}
+          className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-text-muted hover:text-accent transition-colors"
+        >
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+        </button>
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-start sm:justify-between p-4 md:p-6 h-full gap-2">
           <div>
             <p className="text-text-muted text-label font-display">{greeting},</p>
@@ -302,6 +344,55 @@ export default function Dashboard() {
               <Area type="monotone" dataKey="despesa" name="Despesa" stroke="#8C7B6B" strokeWidth={1.5} fill="none" strokeDasharray="4 4" />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ===== VENDAS RECENTES (Admin) ===== */}
+      {data?.recentSales && data.recentSales.length > 0 && (
+        <div className="card-surface overflow-hidden">
+          <div className="px-4 md:px-6 py-4 md:py-5 border-b border-border flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <IconCircle icon={ShoppingCart} size="sm" />
+              <h3 className="text-subheading font-display text-text-primary">Vendas Recentes</h3>
+            </div>
+            {data.salesSummary && (
+              <div className="hidden sm:flex items-center gap-4">
+                <span className="text-small font-display text-text-muted">
+                  <strong className="text-text-primary font-mono">{data.salesSummary.totalActive}</strong> ativas
+                </span>
+                <span className="text-small font-display text-text-muted">
+                  <strong className="text-accent font-mono">{formatCurrency(data.salesSummary.totalValue)}</strong> total
+                </span>
+                <span className="text-small font-display text-text-muted">
+                  <strong className="text-text-primary font-mono">{data.salesSummary.monthlySalesCount}</strong> este mes
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="table-warm">
+              <thead>
+                <tr><th>Cliente</th><th>Pacote</th><th>Vendedor</th><th>Data</th><th>Status</th><th className="text-right">Valor</th></tr>
+              </thead>
+              <tbody>
+                {data.recentSales.map(s => (
+                  <tr key={s.id}>
+                    <td className="text-text-primary font-display font-medium">{s.client}</td>
+                    <td className="text-text-secondary font-display">{s.package}</td>
+                    <td className="text-text-muted font-display">{s.sellerName || '-'}</td>
+                    <td className="text-text-muted font-mono tabular-nums">{formatDate(s.saleDate)}</td>
+                    <td>
+                      <span className={cn(
+                        s.status === 'ativo' ? 'badge-success' :
+                        s.status === 'cancelado' ? 'badge-error' : 'badge-accent'
+                      )}>{s.status}</span>
+                    </td>
+                    <td className="text-right font-mono font-semibold tabular-nums text-accent">{formatCurrency(s.totalValue, s.currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

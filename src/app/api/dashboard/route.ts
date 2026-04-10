@@ -121,6 +121,21 @@ export async function GET(request: NextRequest) {
     const breakEvenTarget = breakEvenSetting ? parseFloat(breakEvenSetting.value) : 230000
     const brlRevenue = byCurrency['BRL'].revenue
 
+    // Sales overview for admin
+    const { data: allSales } = await db
+      .from('sales')
+      .select('id, client, package, total_value, currency, sale_date, status, seller:users!sales_seller_id_fkey(name)')
+      .order('sale_date', { ascending: false })
+      .limit(10)
+
+    const { data: salesStats } = await db
+      .from('sales')
+      .select('id, total_value, sale_date, status')
+
+    const activeSales = salesStats?.filter((s: { status: string }) => s.status === 'ativo') || []
+    const monthlySalesCount = salesStats?.filter((s: { sale_date: string }) => s.sale_date >= startOfMonth && s.sale_date <= endOfMonth).length || 0
+    const totalSalesValue = activeSales.reduce((s: number, r: { total_value: number }) => s + Number(r.total_value), 0)
+
     return NextResponse.json({
       balanceByCurrency,
       forecast30: Math.round(forecast30 * 100) / 100,
@@ -134,6 +149,23 @@ export async function GET(request: NextRequest) {
         recebido: balanceByCurrency[cur].balance + balanceByCurrency[cur].expenses,
         previsto: balanceByCurrency[cur].receivables,
       })).filter(d => d.recebido > 0 || d.previsto > 0),
+      // Sales summary
+      salesSummary: {
+        totalActive: activeSales.length,
+        totalValue: Math.round(totalSalesValue * 100) / 100,
+        monthlySalesCount,
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recentSales: (allSales || []).map((s: any) => ({
+        id: s.id,
+        client: s.client,
+        package: s.package,
+        totalValue: Number(s.total_value),
+        currency: s.currency,
+        saleDate: s.sale_date,
+        status: s.status,
+        sellerName: s.seller?.name || null,
+      })),
     })
   } catch (error) {
     console.error(error)

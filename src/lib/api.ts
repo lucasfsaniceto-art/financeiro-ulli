@@ -9,6 +9,7 @@ export function getAuthHeaders(): Record<string, string> {
 export async function apiFetch(url: string, options?: RequestInit) {
   return fetch(url, {
     ...options,
+    cache: 'no-store',
     headers: {
       ...getAuthHeaders(),
       ...options?.headers,
