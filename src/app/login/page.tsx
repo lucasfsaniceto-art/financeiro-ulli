@@ -37,14 +37,6 @@ export default function LoginPage() {
         />
         {/* Gradient fade para o formulario */}
         <div className="absolute inset-y-0 right-0 w-[120px] bg-gradient-to-r from-transparent to-surface-page" />
-        {/* Logo sobre a foto */}
-        <div className="absolute bottom-10 left-10 z-10">
-          <img
-            src="/images/Vector.png"
-            alt="ULLI viagens"
-            className="w-[160px] drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
-          />
-        </div>
         {/* Overlay escuro sutil para harmonizar */}
         <div className="absolute inset-0 bg-black/10" />
       </div>
@@ -52,14 +44,6 @@ export default function LoginPage() {
       {/* Lado do formulario */}
       <div className="flex-1 flex items-center justify-center p-6 bg-surface-page">
         <div className="w-full max-w-[380px] animate-fade-in">
-          {/* Mobile brand */}
-          <div className="lg:hidden flex justify-center mb-10">
-            <img
-              src="/images/Vector.png"
-              alt="ULLI viagens"
-              className="w-[120px]"
-            />
-          </div>
 
           <div className="mb-8">
             <h2 className="text-heading font-display text-text-primary">Entrar</h2>

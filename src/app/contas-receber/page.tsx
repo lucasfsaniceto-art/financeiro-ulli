@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, CheckCircle } from 'lucide-react'
 import { formatCurrency, formatDate, STATUS_LABELS, STATUS_COLORS, cn } from '@/lib/utils'
-import { mapFinancialRecord } from '@/lib/api'
+import { apiFetch, mapFinancialRecord } from '@/lib/api'
 import RecordFormModal from '@/components/RecordFormModal'
 import { GaugeArc } from '@/components/DesertSVG'
 
@@ -27,7 +27,7 @@ export default function ContasReceberPage() {
     try {
       const params = new URLSearchParams({ type: 'entrada' })
       if (statusFilter) params.set('status', statusFilter)
-      const res = await fetch(`/api/financial-records?${params}`)
+      const res = await apiFetch(`/api/financial-records?${params}`)
       if (res.ok) { const raw = await res.json(); setRecords(raw.map(mapFinancialRecord)) }
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }, [statusFilter])
@@ -35,8 +35,8 @@ export default function ContasReceberPage() {
   useEffect(() => { loadRecords() }, [loadRecords])
 
   async function markAsReceived(id: string) {
-    await fetch(`/api/financial-records/${id}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    await apiFetch(`/api/financial-records/${id}`, {
+      method: 'PUT',
       body: JSON.stringify({ status: 'recebido', paymentDate: new Date().toISOString().split('T')[0] }),
     })
     loadRecords()
@@ -44,7 +44,7 @@ export default function ContasReceberPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Excluir esta conta a receber?')) return
-    await fetch(`/api/financial-records/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/financial-records/${id}`, { method: 'DELETE' })
     loadRecords()
   }
 

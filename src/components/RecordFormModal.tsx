@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { PAYMENT_METHODS, CURRENCIES } from '@/lib/utils'
+import { apiFetch } from '@/lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Category { id: string; name: string; type: string }
@@ -28,7 +29,7 @@ export default function RecordFormModal({ isOpen, onClose, onSave, record, defau
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    fetch('/api/categories').then(r => r.json()).then(setCategories).catch(console.error)
+    apiFetch('/api/categories').then(r => r.json()).then(setCategories).catch(console.error)
   }, [])
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function RecordFormModal({ isOpen, onClose, onSave, record, defau
     try {
       const url = record?.id ? `/api/financial-records/${record.id}` : '/api/financial-records'
       const method = record?.id ? 'PUT' : 'POST'
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const res = await apiFetch(url, { method, body: JSON.stringify(form) })
       if (res.ok) { onSave(); onClose() }
     } catch (e) { console.error(e) } finally { setSaving(false) }
   }

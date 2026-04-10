@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react'
 import { formatCurrency, formatDate, STATUS_LABELS, STATUS_COLORS, cn } from '@/lib/utils'
-import { mapFinancialRecord } from '@/lib/api'
+import { apiFetch, mapFinancialRecord } from '@/lib/api'
 import RecordFormModal from '@/components/RecordFormModal'
 import { EmptyDesert } from '@/components/DesertSVG'
 
@@ -34,19 +34,19 @@ export default function MovimentacoesPage() {
       if (filters.categoryId) params.set('categoryId', filters.categoryId)
       if (filters.startDate) params.set('startDate', filters.startDate)
       if (filters.endDate) params.set('endDate', filters.endDate)
-      const res = await fetch(`/api/financial-records?${params}`)
+      const res = await apiFetch(`/api/financial-records?${params}`)
       if (res.ok) { const raw = await res.json(); setRecords(raw.map(mapFinancialRecord)) }
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }, [filters])
 
   useEffect(() => {
     loadRecords()
-    fetch('/api/categories').then(r => r.json()).then(setCategories).catch(console.error)
+    apiFetch('/api/categories').then(r => r.json()).then(setCategories).catch(console.error)
   }, [loadRecords])
 
   async function handleDelete(id: string) {
     if (!confirm('Tem certeza que deseja excluir esta movimentacao?')) return
-    await fetch(`/api/financial-records/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/financial-records/${id}`, { method: 'DELETE' })
     loadRecords()
   }
 

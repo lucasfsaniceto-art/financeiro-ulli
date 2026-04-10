@@ -5,6 +5,7 @@ import { Save, Plus, Pencil, Trash2, UserPlus, Shield, ShoppingCart } from 'luci
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { apiFetch } from '@/lib/api'
 
 interface SystemSetting { id: string; key: string; value: string; description: string | null }
 interface PaymentMethodConfig { id: string; name: string; active: boolean; default_rate: number }
@@ -33,7 +34,7 @@ export default function ConfiguracoesPage() {
   async function loadAll() {
     setLoading(true)
     try {
-      const [settingsRes, categoriesRes, usersRes] = await Promise.all([fetch('/api/settings'), fetch('/api/categories'), fetch('/api/users')])
+      const [settingsRes, categoriesRes, usersRes] = await Promise.all([apiFetch('/api/settings'), apiFetch('/api/categories'), apiFetch('/api/users')])
       if (settingsRes.ok) { const data = await settingsRes.json(); setSettings(data.settings || []); setPaymentMethods(data.paymentMethods || []) }
       if (categoriesRes.ok) setCategories(await categoriesRes.json())
       if (usersRes.ok) setUsers(await usersRes.json())
@@ -45,48 +46,48 @@ export default function ConfiguracoesPage() {
 
   async function saveSettings() {
     setSaving(true)
-    const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: settings.map(s => ({ key: s.key, value: s.value, description: s.description })) }) })
+    const res = await apiFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: settings.map(s => ({ key: s.key, value: s.value, description: s.description })) }) })
     if (res.ok) showMessage('Configuracoes salvas!')
     setSaving(false)
   }
 
   async function handleAddCategory() {
     if (!catForm.name) return
-    if (editingCat) { await fetch(`/api/categories/${editingCat}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(catForm) }); setEditingCat(null) }
-    else { await fetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(catForm) }) }
+    if (editingCat) { await apiFetch(`/api/categories/${editingCat}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(catForm) }); setEditingCat(null) }
+    else { await apiFetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(catForm) }) }
     setCatForm({ name: '', type: 'entrada' })
-    const res = await fetch('/api/categories'); if (res.ok) setCategories(await res.json())
+    const res = await apiFetch('/api/categories'); if (res.ok) setCategories(await res.json())
     showMessage('Categoria salva!')
   }
 
   async function handleDeleteCategory(id: string) {
     if (!confirm('Excluir esta categoria?')) return
-    await fetch(`/api/categories/${id}`, { method: 'DELETE' })
-    const res = await fetch('/api/categories'); if (res.ok) setCategories(await res.json())
+    await apiFetch(`/api/categories/${id}`, { method: 'DELETE' })
+    const res = await apiFetch('/api/categories'); if (res.ok) setCategories(await res.json())
   }
 
   async function handleAddPaymentMethod() {
     if (!pmForm.name) return
-    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentMethod: { name: pmForm.name, active: true, defaultRate: parseFloat(pmForm.defaultRate) } }) })
+    await apiFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentMethod: { name: pmForm.name, active: true, defaultRate: parseFloat(pmForm.defaultRate) } }) })
     setPmForm({ name: '', defaultRate: '0' })
-    const res = await fetch('/api/settings'); if (res.ok) { const data = await res.json(); setPaymentMethods(data.paymentMethods || []) }
+    const res = await apiFetch('/api/settings'); if (res.ok) { const data = await res.json(); setPaymentMethods(data.paymentMethods || []) }
     showMessage('Metodo adicionado!')
   }
 
   async function togglePaymentMethod(pm: PaymentMethodConfig) {
-    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentMethod: { id: pm.id, name: pm.name, active: !pm.active, defaultRate: pm.default_rate } }) })
-    const res = await fetch('/api/settings'); if (res.ok) { const data = await res.json(); setPaymentMethods(data.paymentMethods || []) }
+    await apiFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentMethod: { id: pm.id, name: pm.name, active: !pm.active, defaultRate: pm.default_rate } }) })
+    const res = await apiFetch('/api/settings'); if (res.ok) { const data = await res.json(); setPaymentMethods(data.paymentMethods || []) }
   }
 
   async function handleAddUser() {
     if (!userForm.name || !userForm.email || !userForm.password) return
-    const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(userForm) })
-    if (res.ok) { setUserForm({ name: '', email: '', password: '', role: 'vendedor' }); setShowUserForm(false); const usersRes = await fetch('/api/users'); if (usersRes.ok) setUsers(await usersRes.json()); showMessage('Usuario criado!') }
+    const res = await apiFetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(userForm) })
+    if (res.ok) { setUserForm({ name: '', email: '', password: '', role: 'vendedor' }); setShowUserForm(false); const usersRes = await apiFetch('/api/users'); if (usersRes.ok) setUsers(await usersRes.json()); showMessage('Usuario criado!') }
     else { const data = await res.json(); showMessage(data.error || 'Erro ao criar usuario') }
   }
 
-  async function toggleUserActive(user: UserData) { await fetch(`/api/users/${user.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !user.active }) }); const res = await fetch('/api/users'); if (res.ok) setUsers(await res.json()) }
-  async function changeUserRole(user: UserData, role: string) { await fetch(`/api/users/${user.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }) }); const res = await fetch('/api/users'); if (res.ok) setUsers(await res.json()) }
+  async function toggleUserActive(user: UserData) { await apiFetch(`/api/users/${user.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !user.active }) }); const res = await apiFetch('/api/users'); if (res.ok) setUsers(await res.json()) }
+  async function changeUserRole(user: UserData, role: string) { await apiFetch(`/api/users/${user.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role }) }); const res = await apiFetch('/api/users'); if (res.ok) setUsers(await res.json()) }
 
   if (loading) return <div className="flex items-center justify-center h-96"><div className="w-6 h-6 border-2 border-accent/20 border-t-accent rounded-full animate-spin" /></div>
 

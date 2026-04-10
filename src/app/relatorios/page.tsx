@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Download, FileBarChart } from 'lucide-react'
 import { formatCurrency, formatDate, STATUS_LABELS } from '@/lib/utils'
-import { mapFinancialRecord } from '@/lib/api'
+import { apiFetch, mapFinancialRecord } from '@/lib/api'
 
 interface Category { id: string; name: string; type: string }
 interface FinancialRecord {
@@ -30,14 +30,14 @@ export default function RelatoriosPage() {
       if (filters.categoryId) params.set('categoryId', filters.categoryId)
       if (filters.status) params.set('status', filters.status)
       if (filters.type) params.set('type', filters.type)
-      const res = await fetch(`/api/financial-records?${params}`)
+      const res = await apiFetch(`/api/financial-records?${params}`)
       if (res.ok) { const raw = await res.json(); setRecords(raw.map(mapFinancialRecord)) }
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }, [filters])
 
   useEffect(() => {
     loadData()
-    fetch('/api/categories').then(r => r.json()).then(setCategories).catch(console.error)
+    apiFetch('/api/categories').then(r => r.json()).then(setCategories).catch(console.error)
   }, [loadData])
 
   function exportCSV() {

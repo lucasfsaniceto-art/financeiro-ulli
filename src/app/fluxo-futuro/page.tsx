@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { formatCurrency } from '@/lib/utils'
-import { mapFinancialRecord, mapSale } from '@/lib/api'
+import { apiFetch, mapFinancialRecord, mapSale } from '@/lib/api'
 import { GaugeArc } from '@/components/DesertSVG'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
@@ -38,8 +38,8 @@ export default function FluxoFuturoPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const res = await fetch('/api/financial-records?status=previsto')
-      const pending = await fetch('/api/financial-records?status=pendente')
+      const res = await apiFetch('/api/financial-records?status=previsto')
+      const pending = await apiFetch('/api/financial-records?status=pendente')
       let allRecords: FinancialRecord[] = []
       if (res.ok) allRecords = [...(await res.json()).map(mapFinancialRecord)]
       if (pending.ok) allRecords = [...allRecords, ...(await pending.json()).map(mapFinancialRecord)]
@@ -65,7 +65,7 @@ export default function FluxoFuturoPage() {
       }
       setInstallmentData(Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b)).map(([month, amount]) => ({ month, amount })))
 
-      const salesRes = await fetch('/api/sales')
+      const salesRes = await apiFetch('/api/sales')
       if (salesRes.ok) {
         const sales = (await salesRes.json()).map(mapSale)
         const profitData = sales.map((s: { package: string; totalValue: number; costs: Array<{ amount: number }> }) => {

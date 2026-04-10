@@ -53,21 +53,21 @@ export default function VendasPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Excluir esta venda e todas as movimentacoes relacionadas?')) return
-    await fetch(`/api/sales/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/sales/${id}`, { method: 'DELETE' })
     loadSales()
   }
 
   async function handleAddCost(saleId: string) {
     if (!costForm.description || !costForm.amount) return
-    await fetch(`/api/sales/${saleId}/costs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(costForm) })
+    await apiFetch(`/api/sales/${saleId}/costs`, { method: 'POST', body: JSON.stringify(costForm) })
     setCostForm({ description: '', amount: '' })
     loadSales()
-    const res = await fetch(`/api/sales/${saleId}`)
+    const res = await apiFetch(`/api/sales/${saleId}`)
     if (res.ok) { const raw = await res.json(); setSelectedSale(mapSale(raw)) }
   }
 
   async function handleStatusChange(id: string, status: string) {
-    await fetch(`/api/sales/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    await apiFetch(`/api/sales/${id}`, { method: 'PUT', body: JSON.stringify({ status }) })
     loadSales()
   }
 

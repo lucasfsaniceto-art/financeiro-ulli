@@ -151,18 +151,20 @@ async function getSellerDashboard(db: any, sellerId: string) {
     .from('sales')
     .select('*, costs:sale_costs(*)')
     .eq('seller_id', sellerId)
+    .order('sale_date', { ascending: false })
 
-  const totalSales = sales?.length || 0
-  const totalValue = sales?.reduce((s: number, r: { total_value: number }) => s + Number(r.total_value), 0) || 0
+  const allSales = sales || []
+  const totalSales = allSales.length
+  const totalValue = allSales.reduce((s: number, r: { total_value: number }) => s + Number(r.total_value), 0)
 
-  const monthlySales = sales?.filter((s: { sale_date: string }) => {
+  const monthlySales = allSales.filter((s: { sale_date: string }) => {
     return s.sale_date >= startOfMonth && s.sale_date <= endOfMonth
-  }) || []
+  })
   const monthlyValue = monthlySales.reduce((s: number, r: { total_value: number }) => s + Number(r.total_value), 0)
 
-  const totalCosts = sales?.reduce((s: number, sale: { costs: Array<{ amount: number }> }) => {
+  const totalCosts = allSales.reduce((s: number, sale: { costs: Array<{ amount: number }> }) => {
     return s + (sale.costs?.reduce((cs: number, c: { amount: number }) => cs + Number(c.amount), 0) || 0)
-  }, 0) || 0
+  }, 0)
 
   return NextResponse.json({
     sellerDashboard: true,
@@ -171,7 +173,7 @@ async function getSellerDashboard(db: any, sellerId: string) {
     monthlySales: monthlySales.length,
     monthlyValue: Math.round(monthlyValue * 100) / 100,
     totalProfit: Math.round((totalValue - totalCosts) * 100) / 100,
-    recentSales: (sales || []).slice(0, 10).map((s: { id: string; client: string; package: string; total_value: number; sale_date: string; status: string }) => ({
+    recentSales: allSales.slice(0, 10).map((s: { id: string; client: string; package: string; total_value: number; sale_date: string; status: string }) => ({
       id: s.id,
       client: s.client,
       package: s.package,
