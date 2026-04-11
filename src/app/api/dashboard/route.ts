@@ -1,9 +1,18 @@
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 import { createServerClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/auth'
 
 const CURRENCIES = ['BRL', 'CLP', 'USD']
+
+// Headers to bypass Vercel Edge/CDN cache — prevents stale dashboard responses
+const NO_STORE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+  'CDN-Cache-Control': 'no-store',
+  'Vercel-CDN-Cache-Control': 'no-store',
+}
 
 interface CurrencyBalance {
   balance: number
@@ -166,10 +175,10 @@ export async function GET(request: NextRequest) {
         status: s.status,
         sellerName: s.seller?.name || null,
       })),
-    })
+    }, { headers: NO_STORE_HEADERS })
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Erro ao carregar dashboard' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao carregar dashboard' }, { status: 500, headers: NO_STORE_HEADERS })
   }
 }
 
@@ -213,7 +222,7 @@ async function getSellerDashboard(db: any, sellerId: string) {
       saleDate: s.sale_date,
       status: s.status,
     })),
-  })
+  }, { headers: NO_STORE_HEADERS })
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
