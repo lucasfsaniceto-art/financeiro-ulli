@@ -20,8 +20,31 @@ export async function GET(request: NextRequest) {
     if (type) query = query.eq('type', type)
     if (status) query = query.eq('status', status)
     if (categoryId) query = query.eq('category_id', categoryId)
-    if (startDate) query = query.gte('transaction_date', startDate)
-    if (endDate) query = query.lte('transaction_date', endDate)
+
+    // Date filter:
+    // - "previsto"/"pendente" → filter by due_date (when it will happen)
+    // - paid/received/cancelled → filter by transaction_date (when it happened)
+    // - no status filter → OR the two so each record is filtered by its effective date
+    if (startDate || endDate) {
+      const useDueDate = status === 'previsto' || status === 'pendente'
+      if (status) {
+        const field = useDueDate ? 'due_date' : 'transaction_date'
+        if (startDate) query = query.gte(field, startDate)
+        if (endDate) query = query.lte(field, endDate)
+      } else {
+        const foreseen = ['status.in.(previsto,pendente)']
+        const settled = ['status.in.(pago,recebido,cancelado,estornado)']
+        if (startDate) {
+          foreseen.push(`due_date.gte.${startDate}`)
+          settled.push(`transaction_date.gte.${startDate}`)
+        }
+        if (endDate) {
+          foreseen.push(`due_date.lte.${endDate}`)
+          settled.push(`transaction_date.lte.${endDate}`)
+        }
+        query = query.or(`and(${foreseen.join(',')}),and(${settled.join(',')})`)
+      }
+    }
 
     const { data, error } = await query
     if (error) throw error
