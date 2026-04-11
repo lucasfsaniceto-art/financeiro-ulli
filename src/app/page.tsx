@@ -117,10 +117,17 @@ const CURRENCIES = ['BRL', 'CLP', 'USD']
 const CURRENCY_FLAGS: Record<string, string> = { BRL: '\u{1F1E7}\u{1F1F7}', CLP: '\u{1F1E8}\u{1F1F1}', USD: '\u{1F1FA}\u{1F1F8}' }
 
 // ===== Shared tooltip for charts =====
+// Parse YYYY-MM-DD as a local date (avoiding UTC shift that pushes dates back 1 day in BRT)
+function parseLocalDate(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  if (!m) return null
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+}
+
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null
-  const d = label ? new Date(label) : null
-  const formattedLabel = d && !isNaN(d.getTime())
+  const d = label ? parseLocalDate(label) : null
+  const formattedLabel = d
     ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
     : label
   return (
@@ -536,8 +543,8 @@ function CashFlowChart({ data }: { data: DailyFlowPoint[] }) {
               axisLine={false}
               tickLine={false}
               tickFormatter={(v: string) => {
-                const d = new Date(v)
-                return isNaN(d.getTime()) ? v : `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`
+                const d = parseLocalDate(v)
+                return d ? `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}` : v
               }}
               interval="preserveStartEnd"
               minTickGap={30}
