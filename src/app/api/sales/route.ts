@@ -97,9 +97,22 @@ export async function POST(request: NextRequest) {
       const installmentValue = calculateInstallmentValue(remaining, installments, interestRate)
       const saleDate = new Date(body.saleDate)
 
+      // Última parcela vence 1 dia antes do tour; parcelas anteriores recuam 1 mês.
+      // Fallback para saleDate + i meses se tourDate não estiver definido.
+      const tourDate = body.tourDate ? new Date(body.tourDate) : null
+      const lastDueDate = tourDate ? new Date(tourDate) : null
+      if (lastDueDate) lastDueDate.setDate(lastDueDate.getDate() - 1)
+
       for (let i = 1; i <= installments; i++) {
-        const dueDate = new Date(saleDate)
-        dueDate.setMonth(dueDate.getMonth() + i)
+        let dueDate: Date
+        if (lastDueDate) {
+          dueDate = new Date(lastDueDate)
+          dueDate.setMonth(dueDate.getMonth() - (installments - i))
+          if (dueDate < saleDate) dueDate = new Date(saleDate)
+        } else {
+          dueDate = new Date(saleDate)
+          dueDate.setMonth(dueDate.getMonth() + i)
+        }
 
         records.push({
           type: 'entrada',
