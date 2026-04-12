@@ -35,3 +35,6 @@ yarn-error.log*
 # prisma (legacy)
 prisma/dev.db
 prisma/dev.db-journal
+
+# import scripts data
+scripts/ledger-data.csv
